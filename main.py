@@ -11,7 +11,7 @@ class CalculatorApp(QMainWindow):
         super().__init__()
         self.setWindowTitle("Investment Calculator")
         # Make window larger
-        self.resize(830, 600)
+        self.resize(1075, 600)
         self._init_ui()
 
     def _init_ui(self):
@@ -53,13 +53,25 @@ class CalculatorApp(QMainWindow):
         input_layout4.addWidget(label6)
         input_layout4.addWidget(self.input_tax_rate)
 
+        input_layout5 = QHBoxLayout()
+        label7 = QLabel("Income growth rate (%):")
+        self.input_income_growth_rate = QLineEdit()
+        label8 = QLabel("Inflation (%):")
+        self.input_inflation = QLineEdit()
+        input_layout5.addWidget(label7)
+        input_layout5.addWidget(self.input_income_growth_rate)
+        input_layout5.addWidget(label8)
+        input_layout5.addWidget(self.input_inflation)
+
         self.calc_button = QPushButton("Calculate")
         self.calc_button.clicked.connect(self.on_calculate)
 
         self.result_table = QTableWidget()
-        self.result_table.setColumnCount(6)
+        self.result_table.setColumnCount(8)
         header_labels = [
-            "Year"
+            "Year",
+            "Income",
+            "Expenses",
         ]
         for roi in [1.06, 1.07, 1.08, 1.09, 1.1]:
             header_labels.append(f"ROI: {roi}\n5Y ROI: {pow(roi, 5):.3f}")
@@ -76,6 +88,7 @@ class CalculatorApp(QMainWindow):
         main_layout.addLayout(input_layout3)
         main_layout.addLayout(input_layout2)
         main_layout.addLayout(input_layout4)
+        main_layout.addLayout(input_layout5)
         main_layout.addWidget(self.calc_button)
         main_layout.addWidget(self.result_table)
 
@@ -104,18 +117,24 @@ class CalculatorApp(QMainWindow):
 
         if apply_taxes:
             tax_factor = 1.0 - float(self.input_tax_rate.text()) / 100.0
+        income_growth_factor = 1.0 + float(self.input_income_growth_rate.text()) / 100.0
+        inflation_factor = 1.0 + float(self.input_inflation.text()) / 100.0
         row_count = self.result_table.rowCount()
         for row in range(row_count):
             current_year = date.today().year
             self.result_table.setItem(row, 0, QTableWidgetItem(str(current_year + row)))
         rois = [1.06, 1.07, 1.08, 1.09, 1.1]
-        income_yearly = float(self.input_income_monthly.text()) * 12
-        expenses_yearly = float(self.input_expenses_monthly.text()) * 12
+        income_yearly_initial = float(self.input_income_monthly.text()) * 12
+        expenses_yearly_initial = float(self.input_expenses_monthly.text()) * 12
         init_value_invest = float(self.input_initial_value_invest.text())
         for col in range(1, 6):
             current_value_invest = float(self.input_current_value_invest.text())
             current_value_other = float(self.input_current_value_total.text()) - current_value_invest
+            income_yearly = income_yearly_initial
+            expenses_yearly = expenses_yearly_initial
             for row in range(row_count):
+                self.result_table.setItem(row, 1, QTableWidgetItem(f"{(income_yearly):.2f}"))
+                self.result_table.setItem(row, 2, QTableWidgetItem(f"{(expenses_yearly):.2f}"))
                 if apply_taxes:
                     current_value = (init_value_invest +
                                      (current_value_invest - init_value_invest) * tax_factor +
@@ -123,11 +142,13 @@ class CalculatorApp(QMainWindow):
                 else:
                     current_value = current_value_invest + current_value_other
                 self.result_table.setItem(
-                    row, col,
+                    row, col + 2,
                     QTableWidgetItem(f"{(current_value):.2f}")
                 )
                 current_value_invest *= rois[col - 1]
                 current_value_invest += income_yearly - expenses_yearly
+                income_yearly *= income_growth_factor
+                expenses_yearly *= inflation_factor
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
