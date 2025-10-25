@@ -117,8 +117,12 @@ class CalculatorApp(QMainWindow):
 
         if apply_taxes:
             tax_factor = 1.0 - float(self.input_tax_rate.text()) / 100.0
-        income_growth_factor = 1.0 + float(self.input_income_growth_rate.text()) / 100.0
-        inflation_factor = 1.0 + float(self.input_inflation.text()) / 100.0
+        income_growth_factor = 1.0
+        if self.input_income_growth_rate.text() != "":
+            income_growth_factor += float(self.input_income_growth_rate.text()) / 100.0
+        inflation_factor = 1.0
+        if self.input_inflation.text() != "":
+            inflation_factor += float(self.input_inflation.text()) / 100.0
         row_count = self.result_table.rowCount()
         for row in range(row_count):
             current_year = date.today().year
@@ -128,6 +132,7 @@ class CalculatorApp(QMainWindow):
         expenses_yearly_initial = float(self.input_expenses_monthly.text()) * 12
         init_value_invest = float(self.input_initial_value_invest.text())
         for col in range(1, 6):
+            non_taxable_value_invest = init_value_invest
             current_value_invest = float(self.input_current_value_invest.text())
             current_value_other = float(self.input_current_value_total.text()) - current_value_invest
             income_yearly = income_yearly_initial
@@ -136,8 +141,8 @@ class CalculatorApp(QMainWindow):
                 self.result_table.setItem(row, 1, QTableWidgetItem(f"{(income_yearly):.2f}"))
                 self.result_table.setItem(row, 2, QTableWidgetItem(f"{(expenses_yearly):.2f}"))
                 if apply_taxes:
-                    current_value = (init_value_invest +
-                                     (current_value_invest - init_value_invest) * tax_factor +
+                    current_value = (non_taxable_value_invest +
+                                     (current_value_invest - non_taxable_value_invest) * tax_factor +
                                      current_value_other)
                 else:
                     current_value = current_value_invest + current_value_other
@@ -147,6 +152,7 @@ class CalculatorApp(QMainWindow):
                 )
                 current_value_invest *= rois[col - 1]
                 current_value_invest += income_yearly - expenses_yearly
+                non_taxable_value_invest += income_yearly - expenses_yearly
                 income_yearly *= income_growth_factor
                 expenses_yearly *= inflation_factor
 
