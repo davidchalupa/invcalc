@@ -1,10 +1,46 @@
 import sys
 from datetime import date
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QLabel,
     QLineEdit, QPushButton, QTableWidget, QTableWidgetItem,
     QVBoxLayout, QHBoxLayout, QMessageBox, QCheckBox
 )
+
+class CopyableTableWidget(QTableWidget):
+    def keyPressEvent(self, event):
+        # Intercept Ctrl+C
+        if (event.modifiers() & Qt.ControlModifier) and event.key() == Qt.Key_C:
+            self.copy_selection()
+        else:
+            super().keyPressEvent(event)
+
+    def copy_selection(self):
+        selection = self.selectedIndexes()
+        if not selection:
+            return
+
+        # Find the boundaries of the selection
+        min_row = min(index.row() for index in selection)
+        max_row = max(index.row() for index in selection)
+        min_col = min(index.column() for index in selection)
+        max_col = max(index.column() for index in selection)
+
+        # Create a 2D grid filled with empty strings
+        rows = max_row - min_row + 1
+        cols = max_col - min_col + 1
+        table_data = [["" for _ in range(cols)] for _ in range(rows)]
+
+        # Populate the grid with selected text
+        for index in selection:
+            row = index.row() - min_row
+            col = index.column() - min_col
+            item = self.item(index.row(), index.column())
+            table_data[row][col] = item.text() if item else ""
+
+        # Build the Tab-Separated Values (TSV) string and copy to clipboard
+        tsv_text = "\n".join("\t".join(row) for row in table_data)
+        QApplication.clipboard().setText(tsv_text)
 
 class CalculatorApp(QMainWindow):
     def __init__(self):
@@ -66,7 +102,8 @@ class CalculatorApp(QMainWindow):
         self.calc_button = QPushButton("Calculate")
         self.calc_button.clicked.connect(self.on_calculate)
 
-        self.result_table = QTableWidget()
+        # Replaced standard QTableWidget with the custom CopyableTableWidget
+        self.result_table = CopyableTableWidget()
         self.result_table.setColumnCount(8)
         header_labels = [
             "Year",
